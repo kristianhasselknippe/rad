@@ -1,1 +1,9 @@
 foo = a + b * c + b + grei / 1 + 1*1*grei%4
+
+
+bar = 1 + b
+
+if bar < foo
+{
+	res = 10
+}

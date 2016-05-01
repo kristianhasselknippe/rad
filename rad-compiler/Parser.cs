@@ -5,7 +5,7 @@ using System.Text;
 
 namespace radcompiler
 {
-	
+
 	class Parser
 	{
 		readonly Lexer _lexer;
@@ -60,8 +60,6 @@ namespace radcompiler
 				Consume();
 				return new Identifier((IdentifierToken)c);
 			}
-			else
-				Error("Expected primary expression");
 			return null;
 		}
 
@@ -84,7 +82,6 @@ namespace radcompiler
 				}
                 return leftHand;
 			}
-			Error("Expected expression");
 			return null;
 		}
 
@@ -116,10 +113,32 @@ namespace radcompiler
 			return null;
 		}
 
+		IfStatement ParseIf()
+		{
+			var t = Peek();
+			if (t is Keyword && ((Keyword)t).Value == "if")
+			{
+				Consume();
+				var condition = ParseExpression(Precedence.Parens);
+				if (condition != null)
+				{
+					if (Consume("{")) {
+						var fb = ParseFunctionBody ();
+						if (fb != null) {
+							return new IfStatement (t, condition, fb);
+						}
+					}
+				}
+			}
+			return null;
+		}
+
 		Statement ParseStatement()
 		{
 			return (Statement)ParseAssignment() ??
-				(Statement)ParseExpression(Precedence.Parens);
+				(Statement)ParseExpression(Precedence.Parens) ??
+				(Statement)ParseIf();
+
 		}
 
 		FunctionBody ParseFunctionBody()

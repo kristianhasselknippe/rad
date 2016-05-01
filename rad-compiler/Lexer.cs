@@ -16,6 +16,15 @@ namespace radcompiler
 		}
 	}
 
+	sealed class Keyword : Token
+	{
+		public readonly string Value;
+		public Keyword(int pos, int len, string value): base(pos, len)
+		{
+			Value = value;
+		}
+	}
+
 	sealed class Int: Token
 	{
 		public readonly int Value;
@@ -199,6 +208,8 @@ namespace radcompiler
 			Emit(new String(start, _pos-start, sb.ToString()));
 		}
 
+		static string[] keywords = new[] { "if" };
+
 		void LexIdentifier()
 		{
 			int start = _pos;
@@ -216,7 +227,11 @@ namespace radcompiler
 				break;
 			}
 			var len = _pos-start;
-			Emit(new IdentifierToken(start, len, Code.Substring(start, len)));
+			var name = Code.Substring(start, len);
+			if (keywords.Contains(name))
+				Emit(new Keyword(start, len, name));
+			else
+				Emit(new IdentifierToken(start, len, name));
 		}
 
 		static string[] tripleOps = new[] {

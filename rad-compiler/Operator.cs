@@ -4,6 +4,7 @@ using System.Collections.Generic;
 
 namespace radcompiler
 {
+
 	enum Precedence
 	{
 		Parens,
