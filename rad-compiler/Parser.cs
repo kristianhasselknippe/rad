@@ -6,19 +6,62 @@ namespace radcompiler
 {
 	abstract class Statement
 	{
-		
+		public readonly Token Source;
+
+		protected Statement(Token source)
+		{
+			Source = source;
+		}
 	}
 
 	abstract class Expression: Statement
 	{
-		
+		protected Expression(Token source) : base(source) { }
+	}
+
+	sealed class BinaryExpression : Expression
+	{
+		public readonly Expression LeftHand;
+		public readonly Expression RightHand;
+		public readonly Operator Operator;
+		public BinaryExpression(Token source, Expression lh, Operator op, Expression rh) : base(source)
+		{
+			LeftHand = lh;
+			RightHand = rh;
+			Operator = op;
+		}
+	}
+
+	sealed class Identifier : Expression
+	{
+		public Identifier(IdentifierToken source) : base(source) { }
+	}
+
+	abstract class Constant : Expression
+	{
+		protected Constant(Token source) : base(source) { }
+	}
+
+	sealed class IntConstant : Constant
+	{
+		public IntConstant(Int source) : base(source) { }
+	}
+
+	sealed class DoubleConstant : Constant
+	{
+		public DoubleConstant(Double source) : base(source) { }
+	}
+
+	sealed class StringConstant : Constant
+	{
+		public StringConstant(String source) : base(source) { }
 	}
 
 	class Assignment: Statement
 	{
 		public readonly Identifier Variable;
 		public readonly Expression Value;
-		public Assignment(Identifier variable, Expression value)
+		public Assignment(Token source, Identifier variable, Expression value) : base(source)
 		{
 			Variable = variable;
 			Value = value;
@@ -57,6 +100,55 @@ namespace radcompiler
 			_root = ParseFunctionBody();
 		}
 
+
+
+		Expression ParsePrimaryExpression(Precedence precedence)
+		{
+			var c = Peek ();
+			var op = c as Operator;
+			if (op != null && op.Value == "(")
+			{
+				Consume();
+				var e = ParseExpression(Precedence.Parens);
+				if (!Consume(")"))
+				{
+					Error("Expected )");
+				}
+				return e;
+			}
+			else if (c is Int)
+				return new IntConstant(c as Int);
+			else if (c is Double)
+				return new DoubleConstant(c as Double);
+			else if (c is String)
+				return new StringConstant(c as String);
+			else if (c is Identifier)
+				return new Identifier(c as IdentifierToken);
+			else
+				Error("Expected primary expression");
+			return null;
+		}
+
+		Expression ParseExpression(Precedence precedence)
+		{
+			var leftHand = ParsePrimaryExpression(precedence);
+			if (leftHand != null)
+			{
+				var t = Peek() as Operator;
+				if (t != null && t.Precedence > precedence)
+				{
+					var rightHand = ParseExpression(t.Precedence);
+					return new BinaryExpression(t, leftHand, t, rightHand);
+				}
+				else
+				{
+					return leftHand;
+				}
+			}
+			Error("Expected expression");
+			return null;
+		}
+
 		Function ParseFunctionBody(string name = null)
 		{
 			var f = new Function(name);
@@ -84,17 +176,17 @@ namespace radcompiler
 		{
 			var start = _pos;
 
-			var funcName = Peek(0) as Identifier;
+			var funcName = Peek(0) as IdentifierToken;
 			if (funcName == null) return null;
 
 			var paramList = new List<Token>();
 			var p = 1;
 
 			// Optional argument list
-			if (Peek(1, "(")) 
+			if (Peek(1, "("))
 			{
 				p++;
-				if (Peek(p, ")")) 
+				if (Peek(p, ")"))
 				{
 					p++;
 				}
@@ -121,7 +213,7 @@ namespace radcompiler
 			{
 				Error("Expected '}'");
 			}
-			
+
 			return f;
 		}
 
@@ -142,7 +234,7 @@ namespace radcompiler
 
 		bool Consume(string op)
 		{
-			if (Peek(0, op)) 
+			if (Peek(0, op))
 			{
 				Consume();
 				return true;
@@ -160,7 +252,7 @@ namespace radcompiler
 
 		bool EOF
 		{
-			get 
+			get
 			{
 				return _pos >= _tokens.Length;
 			}
@@ -175,4 +267,3 @@ namespace radcompiler
 
 	}
 }
-

@@ -16,36 +16,36 @@ namespace radcompiler
 		}
 	}
 
-	sealed class Operator: Token
+	sealed class Int: Token
 	{
-		public readonly string Value;
-		public Operator(int pos, int length, string value):base(pos, length)
+		public readonly int Value;
+		public Int(int pos, int len, int value): base(pos, len)
 		{
 			Value = value;
 		}
 		public override string ToString ()
 		{
-			return "(Operator) " + Value;
+			return "(Int) " + Value;
 		}
 	}
 
-	sealed class Number: Token
+	sealed class Double: Token
 	{
 		public readonly double Value;
-		public Number(int pos, int len, double value): base(pos, len)
+		public Double(int pos, int len, double value): base(pos, len)
 		{
 			Value = value;
 		}
 		public override string ToString ()
 		{
-			return "(Number) " + Value;
+			return "(Double) " + Value;
 		}
 	}
 
-	sealed class Identifier: Token
+	sealed class IdentifierToken: Token
 	{
 		public readonly string Value;
-		public Identifier(int pos, int len, string value): base(pos, len)
+		public IdentifierToken(int pos, int len, string value): base(pos, len)
 		{
 			Value = value;
 		}
@@ -100,7 +100,7 @@ namespace radcompiler
 		int _col = 0;
 		List<Token> _tokens = new List<Token>();
 
-	
+
 		public Lexer (string code)
 		{
 			Code = code;
@@ -117,7 +117,7 @@ namespace radcompiler
 				else if (char.IsLetter(c) || c == '_') LexIdentifier();
 				else if (c == '"') LexString();
 				else if (LexOperator()) continue;
-				else 
+				else
 				{
 					Error("Unrecognized token " + c);
 				}
@@ -140,8 +140,16 @@ namespace radcompiler
 			}
 			var len = _pos-start;
 			var v = Code.Substring(start, len);
-			var d = double.Parse(v, System.Globalization.CultureInfo.InvariantCulture);
-			Emit(new Number(start, len, d));
+			if (v.Contains ('.'))
+			{
+				var d = double.Parse (v, System.Globalization.CultureInfo.InvariantCulture);
+				Emit (new Double (start, len, d));
+			}
+			else
+			{
+				var i = int.Parse (v, System.Globalization.CultureInfo.InvariantCulture);
+				Emit (new Int (start, len, i));
+			}
 		}
 
 		void LexString()
@@ -169,7 +177,7 @@ namespace radcompiler
 					Consume();
 					continue;
 				}
-				else if (c == '"') 
+				else if (c == '"')
 				{
 					Consume();
 					break;
@@ -208,18 +216,18 @@ namespace radcompiler
 				break;
 			}
 			var len = _pos-start;
-			Emit(new Identifier(start, len, Code.Substring(start, len)));
+			Emit(new IdentifierToken(start, len, Code.Substring(start, len)));
 		}
 
-		static string[] tripleOps = new[] { 
+		static string[] tripleOps = new[] {
 			"&&=", "||="
 		};
 
-		static string[] doubleOps = new[] { 
-			"++", "--", "==", "&&", "||", "+=", "-=", "*=", "/=", "&=", "|=", "^=", "%=" 
+		static string[] doubleOps = new[] {
+			"++", "--", "==", "&&", "||", "+=", "-=", "*=", "/=", "&=", "|=", "^=", "%="
 		};
 
-		static string[] singleOps = new[] { 
+		static string[] singleOps = new[] {
 			"+", "-", "*", "/", "&", "|", "^", "=", "%", "(", ")", "{", "}", "[", "]", "?", ":", ",", ".", "!"
 		};
 
@@ -256,7 +264,7 @@ namespace radcompiler
 				}
 			}
 
-			if (singleOps.Contains(c.ToString())) 
+			if (singleOps.Contains(c.ToString()))
 			{
 				Emit(new Operator(start, 1, c.ToString()));
 				return true;
@@ -283,7 +291,7 @@ namespace radcompiler
 			int col = 1;
 			for (int i = 0; i < pos; i++)
 			{
-				if (Code[i] == '\n') 
+				if (Code[i] == '\n')
 				{
 					line++;
 					col = 1;
@@ -296,7 +304,7 @@ namespace radcompiler
 			return new TextPosition(pos, line, col);
 		}
 
-		char Peek(int offset=0) 
+		char Peek(int offset=0)
 		{
 			return Code[_pos+offset];
 		}
@@ -310,4 +318,3 @@ namespace radcompiler
 		}
 	}
 }
-
