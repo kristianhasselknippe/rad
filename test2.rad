@@ -1,0 +1,44 @@
+print(k) {
+
+}
+
+hei = 500
+hopp = "kuk"
+
+foobar = hei + 100
+
+add(a,b){
+	a + b
+}
+
+result = add(5,10)
+
+if hei > 0 {
+
+} else {
+
+}
+
+k.bar = 500
+
+concert(desc, time, place) {
+    going = false
+    timestamp {
+        time = system_getTime()
+    }
+    t = timestamp()
+    clicked {
+        going = !going
+    }
+    printOut {
+        print(desc + ", " + time + ", " + place)
+    }
+}
+concerts = [
+    concert("Underworld", "San Francisco", "lol")
+    concert("A", "San Francisco", "lol")
+    concert("B", "San Francisco", "lol")
+]
+k.clicked()
+k.printOut()
+print(k)

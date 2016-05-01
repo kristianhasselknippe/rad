@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace radcompiler
 {
@@ -12,17 +13,26 @@ namespace radcompiler
 		{
 			Source = source;
 		}
+
+		public virtual void Serialize (StringBuilder sb) { }
 	}
 
 	abstract class Expression: Statement
 	{
 		protected Expression(Token source) : base(source) { }
+		public override void Serialize (StringBuilder sb)
+		{
+			sb.Append (Source.ToString ());
+		}
 	}
 
-	/*class FunctionCall : Expression(Token source) : base(source)
+	sealed class FunctionCall : Expression
 	{
+		public FunctionCall(Token source) : base(source)
+		{
 
-	}*/
+		}
+	}
 
 	sealed class BinaryExpression : Expression
 	{
@@ -35,11 +45,20 @@ namespace radcompiler
 			RightHand = rh;
 			Operator = op;
 		}
+
+		public override void Serialize (StringBuilder sb)
+		{
+			sb.AppendLine(LeftHand + " " + Operator + " " + RightHand);
+		}
 	}
 
 	sealed class Identifier : Expression
 	{
 		public Identifier(IdentifierToken source) : base(source) { }
+		public override void Serialize (StringBuilder sb)
+		{
+			sb.Append (Source.ToString ());
+		}
 	}
 
 	abstract class Constant : Expression
@@ -50,16 +69,28 @@ namespace radcompiler
 	sealed class IntConstant : Constant
 	{
 		public IntConstant(Int source) : base(source) { }
+		public override string ToString ()
+		{
+			return "IntConstant(" + Source.ToString () + ")";
+		}
 	}
 
 	sealed class DoubleConstant : Constant
 	{
 		public DoubleConstant(Double source) : base(source) { }
+		public override string ToString ()
+		{
+			return "DoubleConstant(" + Source.ToString () + ")";
+		}
 	}
 
 	sealed class StringConstant : Constant
 	{
 		public StringConstant(String source) : base(source) { }
+		public override string ToString ()
+		{
+			return "StringConstant(" + Source.ToString () + ")";
+		}
 	}
 
 	class Assignment: Statement
@@ -71,6 +102,30 @@ namespace radcompiler
 			Variable = variable;
 			Value = value;
 		}
+
+		public override void Serialize (StringBuilder sb)
+		{
+			Variable.Serialize (sb);
+			sb.Append(" = ");
+			Value.Serialize (sb);
+			sb.Append("\n");
+		}
+	}
+
+	class FunctionBody
+	{
+		public readonly IList<Function> Functions = new List<Function>();
+		public readonly IList<Statement> Statements = new List<Statement>();
+
+		public FunctionBody() { }
+
+		public void Serialize(StringBuilder sb)
+		{
+			foreach (var f in Functions)
+				f.Serialize(sb);
+			foreach (var s in Statements)
+				s.Serialize(sb);
+		}
 	}
 
 	class Function
@@ -78,13 +133,30 @@ namespace radcompiler
 		static int anonymousCounter = 0;
 
 		public readonly string Name;
-		public Function(string name)
+		public readonly IList<IdentifierToken> ParameterList;
+		public readonly FunctionBody FunctionBody;
+
+		public Function(string name, IList<IdentifierToken> paramList, FunctionBody body)
 		{
 			Name = name ?? ("anonymous_" + anonymousCounter++);
+			ParameterList = paramList;
+			FunctionBody = body;
 		}
 
-		public readonly List<Function> Functions = new List<Function>();
-		public readonly List<Statement> Statements = new List<Statement>();
+		public void Serialize(StringBuilder sb)
+		{
+
+			sb.Append (Name + "(");
+			for (var i = 0; i < ParameterList.Count; i++)
+			{
+				sb.Append (ParameterList[i].ToString ());
+				if (i < ParameterList.Count - 1)
+					sb.Append(",");
+			}
+			sb.Append(")");
+			sb.Append("\n");
+			FunctionBody.Serialize(sb);
+		}
 	}
 
 	class Parser
@@ -94,8 +166,8 @@ namespace radcompiler
 
 		int _pos = 0;
 
-		readonly Function _root;
-		public Function Root { get { return _root; } }
+		readonly FunctionBody _root;
+		public FunctionBody Root { get { return _root; } }
 
 		public Parser (Lexer lexer)
 		{
@@ -124,13 +196,25 @@ namespace radcompiler
 				return e;
 			}
 			else if (c is Int)
+			{
+				Consume();
 				return new IntConstant((Int)c);
+			}
 			else if (c is Double)
+			{
+				Consume();
 				return new DoubleConstant((Double)c);
+			}
 			else if (c is String)
+			{
+				Consume();
 				return new StringConstant((String)c);
+			}
 			else if (c is IdentifierToken)
+			{
+				Consume();
 				return new Identifier((IdentifierToken)c);
+			}
 			else
 				Error("Expected primary expression");
 			return null;
@@ -141,9 +225,8 @@ namespace radcompiler
 			var leftHand = ParsePrimaryExpression(precedence);
 			if (leftHand != null)
 			{
-				Consume ();
 				var t = Peek() as Operator;
-				if (t != null && t.Precedence > precedence)
+				if (t != null && t.Precedence >= precedence)
 				{
 					Consume();
 					var rightHand = ParseExpression(t.Precedence);
@@ -192,10 +275,9 @@ namespace radcompiler
 				(Statement)ParseExpression(Precedence.Parens);
 		}
 
-		Function ParseFunctionBody(string name = null)
+		FunctionBody ParseFunctionBody()
 		{
-			var f = new Function(name);
-
+			var fb = new FunctionBody();
 			while (!EOF)
 			{
 
@@ -204,23 +286,24 @@ namespace radcompiler
 				var fd = ParseFunctionDeclaration();
 				if (fd != null)
 				{
-					f.Functions.Add(fd);
+					fb.Functions.Add(fd);
 				}
 				else
 				{
 					var s = ParseStatement();
 					if (s != null)
 					{
-						f.Statements.Add(s);
+						fb.Statements.Add(s);
 					}
 					else
 					{
+
 						Error("Expected statement, function declaration or }");
 					}
 				}
 			}
 
-			return f;
+			return fb;
 		}
 
 		Function ParseFunctionDeclaration()
@@ -230,11 +313,11 @@ namespace radcompiler
 			var funcName = Peek(0) as IdentifierToken;
 			if (funcName == null) return null;
 
-			var paramList = new List<Token>();
+			var paramList = new List<IdentifierToken>();
 			var p = 1;
 
 			// Optional argument list
-			if (Peek(1, "("))
+			if (Peek(p, "("))
 			{
 				p++;
 				if (Peek(p, ")"))
@@ -245,12 +328,18 @@ namespace radcompiler
 				{
 					var paramName = Peek(p);
 					if (!(paramName is IdentifierToken)) return null;
-					if (Peek(p+1, ")")) { p+=2; break; }
+					if (Peek(p+1, ")"))
+					{
+						paramList.Add((IdentifierToken)paramName);
+						p+=2;
+						break;
+					}
 					if (!Peek(p+1, ",")) return null;
-					paramList.Add(paramName);
+					paramList.Add((IdentifierToken)paramName);
 					p += 2;
 				}
 			}
+
 
 			// The curly brace is the hallmark of a function
 			if (!Peek(p, "{")) return null;
@@ -258,7 +347,10 @@ namespace radcompiler
 
 			// Now we know for sure it is a function declaration
 			Consume(p);
-			var f = ParseFunctionBody(funcName.Value);
+
+			var f = new Function(funcName.Value,
+								 paramList,
+								 ParseFunctionBody());
 
 			if (!Consume("}"))
 			{
@@ -315,6 +407,11 @@ namespace radcompiler
 			Console.WriteLine(textPos + " syntax error: " + message);
 		}
 
-
+		public override string ToString()
+	   	{
+			var sb = new StringBuilder();
+			Root.Serialize(sb);
+			return sb.ToString();
+		}
 	}
 }
