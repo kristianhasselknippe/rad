@@ -5,160 +5,7 @@ using System.Text;
 
 namespace radcompiler
 {
-	abstract class Statement
-	{
-		public readonly Token Source;
-
-		protected Statement(Token source)
-		{
-			Source = source;
-		}
-
-		public virtual void Serialize (StringBuilder sb) { }
-	}
-
-	abstract class Expression: Statement
-	{
-		protected Expression(Token source) : base(source) { }
-		public override void Serialize (StringBuilder sb)
-		{
-			sb.Append (Source.ToString ());
-		}
-	}
-
-	sealed class FunctionCall : Expression
-	{
-		public FunctionCall(Token source) : base(source)
-		{
-
-		}
-	}
-
-	sealed class BinaryExpression : Expression
-	{
-		public readonly Expression LeftHand;
-		public readonly Expression RightHand;
-		public readonly Operator Operator;
-		public BinaryExpression(Token source, Expression lh, Operator op, Expression rh) : base(source)
-		{
-			LeftHand = lh;
-			RightHand = rh;
-			Operator = op;
-		}
-
-		public override void Serialize (StringBuilder sb)
-		{
-			sb.AppendLine(LeftHand + " " + Operator + " " + RightHand);
-		}
-	}
-
-	sealed class Identifier : Expression
-	{
-		public Identifier(IdentifierToken source) : base(source) { }
-		public override void Serialize (StringBuilder sb)
-		{
-			sb.Append (Source.ToString ());
-		}
-	}
-
-	abstract class Constant : Expression
-	{
-		protected Constant(Token source) : base(source) { }
-	}
-
-	sealed class IntConstant : Constant
-	{
-		public IntConstant(Int source) : base(source) { }
-		public override string ToString ()
-		{
-			return "IntConstant(" + Source.ToString () + ")";
-		}
-	}
-
-	sealed class DoubleConstant : Constant
-	{
-		public DoubleConstant(Double source) : base(source) { }
-		public override string ToString ()
-		{
-			return "DoubleConstant(" + Source.ToString () + ")";
-		}
-	}
-
-	sealed class StringConstant : Constant
-	{
-		public StringConstant(String source) : base(source) { }
-		public override string ToString ()
-		{
-			return "StringConstant(" + Source.ToString () + ")";
-		}
-	}
-
-	class Assignment: Statement
-	{
-		public readonly Identifier Variable;
-		public readonly Expression Value;
-		public Assignment(Token source, Identifier variable, Expression value) : base(source)
-		{
-			Variable = variable;
-			Value = value;
-		}
-
-		public override void Serialize (StringBuilder sb)
-		{
-			Variable.Serialize (sb);
-			sb.Append(" = ");
-			Value.Serialize (sb);
-			sb.Append("\n");
-		}
-	}
-
-	class FunctionBody
-	{
-		public readonly IList<Function> Functions = new List<Function>();
-		public readonly IList<Statement> Statements = new List<Statement>();
-
-		public FunctionBody() { }
-
-		public void Serialize(StringBuilder sb)
-		{
-			foreach (var f in Functions)
-				f.Serialize(sb);
-			foreach (var s in Statements)
-				s.Serialize(sb);
-		}
-	}
-
-	class Function
-	{
-		static int anonymousCounter = 0;
-
-		public readonly string Name;
-		public readonly IList<IdentifierToken> ParameterList;
-		public readonly FunctionBody FunctionBody;
-
-		public Function(string name, IList<IdentifierToken> paramList, FunctionBody body)
-		{
-			Name = name ?? ("anonymous_" + anonymousCounter++);
-			ParameterList = paramList;
-			FunctionBody = body;
-		}
-
-		public void Serialize(StringBuilder sb)
-		{
-
-			sb.Append (Name + "(");
-			for (var i = 0; i < ParameterList.Count; i++)
-			{
-				sb.Append (ParameterList[i].ToString ());
-				if (i < ParameterList.Count - 1)
-					sb.Append(",");
-			}
-			sb.Append(")");
-			sb.Append("\n");
-			FunctionBody.Serialize(sb);
-		}
-	}
-
+	
 	class Parser
 	{
 		readonly Lexer _lexer;
@@ -177,8 +24,6 @@ namespace radcompiler
 
 			_root = ParseFunctionBody();
 		}
-
-
 
 		Expression ParsePrimaryExpression(Precedence precedence)
 		{
@@ -220,22 +65,24 @@ namespace radcompiler
 			return null;
 		}
 
+        bool PeekOperator(Precedence precedence)
+        {
+            var t = Peek() as Operator;
+            return t != null && t.Precedence >= precedence;
+        }
+
 		Expression ParseExpression(Precedence precedence)
 		{
 			var leftHand = ParsePrimaryExpression(precedence);
 			if (leftHand != null)
 			{
-				var t = Peek() as Operator;
-				if (t != null && t.Precedence >= precedence)
-				{
-					Consume();
-					var rightHand = ParseExpression(t.Precedence);
-					return new BinaryExpression(t, leftHand, t, rightHand);
+                while (PeekOperator(precedence))
+                {
+                    var t = Consume() as Operator;
+                    var rightHand = ParseExpression(t.Precedence);
+                    leftHand = new BinaryExpression(t, leftHand, t, rightHand);
 				}
-				else
-				{
-					return leftHand;
-				}
+                return leftHand;
 			}
 			Error("Expected expression");
 			return null;
@@ -370,9 +217,11 @@ namespace radcompiler
 			return paren.Value == op;
 		}
 
-		void Consume(int tokenCount=1)
+		Token Consume(int tokenCount=1)
 		{
+            var t = _tokens[_pos];
 			_pos += tokenCount;
+            return t;
 		}
 
 		bool Consume(string op)
@@ -403,7 +252,7 @@ namespace radcompiler
 
 		void Error(string message)
 		{
-			var textPos = _lexer.ToTextPosition(_tokens[_pos].Position).ToString();
+            var textPos = _lexer.ToTextPosition(_tokens[_pos].Position).ToString();
 			Console.WriteLine(textPos + " syntax error: " + message);
 		}
 

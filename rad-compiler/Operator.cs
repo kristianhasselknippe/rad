@@ -75,7 +75,7 @@ namespace radcompiler
 
 		public override string ToString ()
 		{
-			return "(Operator) " + Value;
+			return Value;
 		}
 
 		static Precedence GetPrecedenceFromString(string opString)
