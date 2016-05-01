@@ -19,6 +19,11 @@ namespace radcompiler
 		protected Expression(Token source) : base(source) { }
 	}
 
+	/*class FunctionCall : Expression(Token source) : base(source)
+	{
+
+	}*/
+
 	sealed class BinaryExpression : Expression
 	{
 		public readonly Expression LeftHand;
@@ -79,6 +84,7 @@ namespace radcompiler
 		}
 
 		public readonly List<Function> Functions = new List<Function>();
+		public readonly List<Statement> Statements = new List<Statement>();
 	}
 
 	class Parser
@@ -106,6 +112,7 @@ namespace radcompiler
 		{
 			var c = Peek ();
 			var op = c as Operator;
+
 			if (op != null && op.Value == "(")
 			{
 				Consume();
@@ -117,13 +124,13 @@ namespace radcompiler
 				return e;
 			}
 			else if (c is Int)
-				return new IntConstant(c as Int);
+				return new IntConstant((Int)c);
 			else if (c is Double)
-				return new DoubleConstant(c as Double);
+				return new DoubleConstant((Double)c);
 			else if (c is String)
-				return new StringConstant(c as String);
-			else if (c is Identifier)
-				return new Identifier(c as IdentifierToken);
+				return new StringConstant((String)c);
+			else if (c is IdentifierToken)
+				return new Identifier((IdentifierToken)c);
 			else
 				Error("Expected primary expression");
 			return null;
@@ -134,9 +141,11 @@ namespace radcompiler
 			var leftHand = ParsePrimaryExpression(precedence);
 			if (leftHand != null)
 			{
+				Consume ();
 				var t = Peek() as Operator;
 				if (t != null && t.Precedence > precedence)
 				{
+					Consume();
 					var rightHand = ParseExpression(t.Precedence);
 					return new BinaryExpression(t, leftHand, t, rightHand);
 				}
@@ -149,12 +158,47 @@ namespace radcompiler
 			return null;
 		}
 
+
+		Assignment ParseAssignment()
+		{
+			var t = Peek();
+			if (t is IdentifierToken)
+			{
+				var identifier = new Identifier((IdentifierToken)t);
+				if (Peek(1,"="))
+				{
+					Consume(2);
+					var e = ParseExpression(Precedence.Parens);
+					if (e != null)
+					{
+						return new Assignment(t, identifier, e);
+					}
+					else
+					{
+						return null;
+					}
+				}
+				else
+				{
+					return null;
+				}
+			}
+			return null;
+		}
+
+		Statement ParseStatement()
+		{
+			return (Statement)ParseAssignment() ??
+				(Statement)ParseExpression(Precedence.Parens);
+		}
+
 		Function ParseFunctionBody(string name = null)
 		{
 			var f = new Function(name);
 
 			while (!EOF)
 			{
+
 				if (Peek(0, "}")) break;
 
 				var fd = ParseFunctionDeclaration();
@@ -164,8 +208,15 @@ namespace radcompiler
 				}
 				else
 				{
-					Error("Unexpected syntax");
-					return f;
+					var s = ParseStatement();
+					if (s != null)
+					{
+						f.Statements.Add(s);
+					}
+					else
+					{
+						Error("Expected statement, function declaration or }");
+					}
 				}
 			}
 
@@ -193,7 +244,7 @@ namespace radcompiler
 				else while (true)
 				{
 					var paramName = Peek(p);
-					if (!(paramName is Identifier)) return null;
+					if (!(paramName is IdentifierToken)) return null;
 					if (Peek(p+1, ")")) { p+=2; break; }
 					if (!Peek(p+1, ",")) return null;
 					paramList.Add(paramName);
