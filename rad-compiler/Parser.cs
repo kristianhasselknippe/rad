@@ -9,6 +9,11 @@ namespace radcompiler
 	class Parser
 	{
 		readonly Lexer _lexer;
+		public Lexer Lexer
+		{
+			get { return _lexer; }
+		}
+
 		readonly Token[] _tokens;
 
 		int _pos = 0;

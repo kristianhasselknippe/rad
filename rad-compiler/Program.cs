@@ -14,6 +14,9 @@ namespace radcompiler
 			var parser = new Parser(lexer);
 
 			Console.Write(parser.ToString ());
+
+			var compiler = new Compiler(parser);
+
 		}
 	}
 }

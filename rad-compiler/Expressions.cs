@@ -59,7 +59,7 @@ namespace radcompiler
         }
     }
 
-    sealed class Identifier : Expression
+    class Identifier : Expression
     {
         public readonly string Name;
         public Identifier(IdentifierToken source) : base(source)
