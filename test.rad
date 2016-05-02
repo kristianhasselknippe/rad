@@ -10,7 +10,7 @@ print(k) {
 }
 
 hei = 500
-hopp = "kuk"
+hopp = "hopp"
 
 foobar = hei + 100
 
