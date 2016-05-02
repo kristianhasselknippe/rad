@@ -8,21 +8,23 @@ namespace radcompiler
 {
     class FunctionBody
     {
-        public readonly IList<Function> Functions = new List<Function>();
+        public readonly IList<FunctionDeclaration> Functions = new List<FunctionDeclaration>();
         public readonly IList<Statement> Statements = new List<Statement>();
 
         public FunctionBody() { }
 
         public void Serialize(StringBuilder sb)
         {
+			sb.Append("{\n");
             foreach (var f in Functions)
                 f.Serialize(sb);
             foreach (var s in Statements)
                 s.Serialize(sb);
+			sb.Append("\n}\n");
         }
     }
 
-    class Function
+    class FunctionDeclaration
     {
         static int anonymousCounter = 0;
 
@@ -30,7 +32,7 @@ namespace radcompiler
         public readonly IList<IdentifierToken> ParameterList;
         public readonly FunctionBody FunctionBody;
 
-        public Function(string name, IList<IdentifierToken> paramList, FunctionBody body)
+        public FunctionDeclaration(string name, IList<IdentifierToken> paramList, FunctionBody body)
         {
             Name = name ?? ("anonymous_" + anonymousCounter++);
             ParameterList = paramList;

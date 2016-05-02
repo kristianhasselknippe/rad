@@ -60,7 +60,7 @@ namespace radcompiler
 		}
 		public override string ToString ()
 		{
-			return "(Identifier) " + Value;
+			return "(id)" + Value;
 		}
 	}
 
@@ -261,7 +261,7 @@ namespace radcompiler
 				{
 					Consume();
 					Consume();
-					Emit(new Operator(start, 3, op));
+					Emit(new BinaryOperator(start, 3, op));
 					return true;
 				}
 			}
@@ -274,14 +274,19 @@ namespace radcompiler
 				if (doubleOps.Contains(op))
 				{
 					Consume();
-					Emit(new Operator(start, 2, op));
+					Emit(new BinaryOperator(start, 2, op));
 					return true;
 				}
 			}
 
 			if (singleOps.Contains(c.ToString()))
 			{
-				Emit(new Operator(start, 1, c.ToString()));
+				if ("(){}[]".Contains(c.ToString()))
+					Emit(new GroupingOperator(start, 1, c.ToString()));
+				else if (",.".Contains(c.ToString()))
+					Emit(new SeparatorOperator(start, 1, c.ToString()));
+				else
+					Emit(new BinaryOperator(start, 1, c.ToString()));
 				return true;
 			}
 

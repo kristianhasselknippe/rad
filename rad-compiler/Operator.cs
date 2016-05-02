@@ -64,7 +64,7 @@ namespace radcompiler
 
 
 
-	sealed class Operator: Token
+	abstract class Operator : Token
 	{
 		public readonly string Value;
 		public readonly Precedence Precedence;
@@ -118,6 +118,30 @@ namespace radcompiler
 			else if (opString == ".") return Precedence.Period;
 
 			else return Precedence.UnrecognizedOp;
+		}
+	}
+
+	sealed class BinaryOperator : Operator
+	{
+		public BinaryOperator(int pos, int length, string value) :
+			base(pos, length, value)
+		{
+		}
+	}
+
+	sealed class GroupingOperator : Operator
+	{
+		public GroupingOperator(int pos, int length, string value) :
+			base(pos, length, value)
+		{
+		}
+	}
+
+	sealed class SeparatorOperator : Operator
+	{
+		public SeparatorOperator(int pos, int length, string value) :
+			base(pos, length, value)
+		{
 		}
 	}
 }

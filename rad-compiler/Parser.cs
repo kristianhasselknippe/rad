@@ -71,12 +71,19 @@ namespace radcompiler
 
 		Expression ParseExpression(Precedence precedence)
 		{
+			var fc = ParseFunctionCall();
+			if (fc != null)
+				return fc;
+
 			var leftHand = ParsePrimaryExpression(precedence);
 			if (leftHand != null)
 			{
                 while (PeekOperator(precedence))
                 {
-                    var t = Consume() as Operator;
+					var t = Peek() as BinaryOperator;
+					if (t == null)
+						return leftHand;
+					Consume ();
                     var rightHand = ParseExpression(t.Precedence);
                     leftHand = new BinaryExpression(t, leftHand, t, rightHand);
 				}
@@ -84,7 +91,6 @@ namespace radcompiler
 			}
 			return null;
 		}
-
 
 		Assignment ParseAssignment()
 		{
@@ -113,6 +119,7 @@ namespace radcompiler
 			return null;
 		}
 
+
 		IfStatement ParseIf()
 		{
 			var t = Peek();
@@ -135,10 +142,14 @@ namespace radcompiler
 
 		Statement ParseStatement()
 		{
-			return (Statement)ParseAssignment() ??
-				(Statement)ParseExpression(Precedence.Parens) ??
-				(Statement)ParseIf();
-
+			Statement ret = null;
+			ret = (Statement)ParseAssignment();
+			if (ret != null) return ret;
+			ret = (Statement)ParseIf();
+			if (ret != null) return ret;
+			ret = (Statement)ParseExpression(Precedence.Parens);
+			if (ret != null) return ret;
+			return ret;
 		}
 
 		FunctionBody ParseFunctionBody()
@@ -146,7 +157,6 @@ namespace radcompiler
 			var fb = new FunctionBody();
 			while (!EOF)
 			{
-
 				if (Peek(0, "}")) break;
 
 				var fd = ParseFunctionDeclaration();
@@ -163,7 +173,6 @@ namespace radcompiler
 					}
 					else
 					{
-
 						Error("Expected statement, function declaration or }");
 					}
 				}
@@ -172,7 +181,43 @@ namespace radcompiler
 			return fb;
 		}
 
-		Function ParseFunctionDeclaration()
+		FunctionCall ParseFunctionCall()
+		{
+			var t = Peek() as IdentifierToken;
+			if (t != null)
+			{
+				var identifier = new Identifier(t);
+				var functionCall = new FunctionCall(t, identifier);
+				var p = 1;
+				if (PeekGroupingOperator(p,"("))
+				{
+					Consume(p+1);
+					if (PeekGroupingOperator(p, ")"))
+					{
+						return functionCall;
+					}
+					else while (true)
+					{
+						var arg = ParseExpression(Precedence.Parens);
+						if (arg != null)
+						{
+							functionCall.ArgumentList.Add(arg);
+						}
+						if (Consume(",")) continue;
+						else if (Consume(")")) return functionCall;
+						else
+						{
+							Error("Expected token \")\" in function call");
+							return null;
+						};
+					}
+
+				}
+			}
+			return null;
+		}
+
+		FunctionDeclaration ParseFunctionDeclaration()
 		{
 			var start = _pos;
 
@@ -214,7 +259,7 @@ namespace radcompiler
 			// Now we know for sure it is a function declaration
 			Consume(p);
 
-			var f = new Function(funcName.Value,
+			var f = new FunctionDeclaration(funcName.Value,
 								 paramList,
 								 ParseFunctionBody());
 
@@ -227,14 +272,34 @@ namespace radcompiler
 		}
 
 
-
-
 		bool Peek(int offset, string op)
 		{
 			var paren = Peek(offset) as Operator;
 			if (paren == null) return false;
 			return paren.Value == op;
 		}
+
+		bool PeekGroupingOperator(int offset, string op)
+		{
+			var paren = Peek(offset) as GroupingOperator;
+			if (paren == null) return false;
+			return paren.Value == op;
+		}
+
+		bool PeekSeparatorOperator(int offset, string op)
+		{
+			var paren = Peek(offset) as SeparatorOperator;
+			if (paren == null) return false;
+			return paren.Value == op;
+		}
+
+		Token Peek(int offset=0)
+		{
+			if (_pos+offset < _tokens.Length)
+				return _tokens[_pos+offset];
+			else return null;
+		}
+
 
 		Token Consume(int tokenCount=1)
 		{
@@ -251,14 +316,6 @@ namespace radcompiler
 				return true;
 			}
 			return false;
-		}
-
-
-		Token Peek(int offset=0)
-		{
-			if (_pos+offset < _tokens.Length)
-				return _tokens[_pos+offset];
-			else return null;
 		}
 
 		bool EOF

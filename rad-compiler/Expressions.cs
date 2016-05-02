@@ -17,9 +17,23 @@ namespace radcompiler
 
     sealed class FunctionCall : Expression
     {
-        public FunctionCall(Token source) : base(source)
-        {
+		public readonly Identifier FunctionIdentifier;
+		public readonly List<Expression> ArgumentList = new List<Expression>();
 
+        public FunctionCall(Token source, Identifier functionIdentifier) : base(source)
+        {
+			FunctionIdentifier = functionIdentifier;
+        }
+
+        public override void Serialize(StringBuilder sb)
+        {
+			FunctionIdentifier.Serialize(sb);
+			sb.Append("(");
+			foreach (var a in ArgumentList)
+			{
+				a.Serialize(sb);
+			}
+			sb.Append(")\n");
         }
     }
 
