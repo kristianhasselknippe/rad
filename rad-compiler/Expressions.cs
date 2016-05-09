@@ -66,6 +66,7 @@ namespace radcompiler
         {
             Name = source.Value;
         }
+
         public override void Serialize(StringBuilder sb)
         {
             sb.Append(Name);

@@ -1,6 +1,6 @@
 foo(a,b)
 {
-	a+b
+	a * b
 }
 
 foo(1,2)
@@ -9,15 +9,23 @@ print(k) {
 
 }
 
-hei = 500
-hei = hopp
+
+
+hei = kristian
+
 hopp = "hopp"
 
 foobar = hei + 100
 
+
+
 add(a,b){
 	a + b
 }
+
+
+kristian = 1
+add(kristian,2)
 
 result = add(5,10)
 

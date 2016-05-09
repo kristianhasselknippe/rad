@@ -13,7 +13,12 @@ namespace radcompiler
 
     sealed class IntConstant : Constant
     {
-        public IntConstant(Int source) : base(source) { }
+		public readonly int IntValue;
+        public IntConstant(Int source) : base(source)
+		{
+			IntValue = source.Value;
+		}
+
         public override string ToString()
         {
             return Source.ToString();
@@ -22,7 +27,13 @@ namespace radcompiler
 
     sealed class DoubleConstant : Constant
     {
-        public DoubleConstant(Double source) : base(source) { }
+		public readonly double DoubleValue;
+
+        public DoubleConstant(Double source) : base(source)
+		{
+			DoubleValue = source.Value;
+		}
+
         public override string ToString()
         {
             return Source.ToString() + "d";
@@ -31,7 +42,13 @@ namespace radcompiler
 
     sealed class StringConstant : Constant
     {
-        public StringConstant(String source) : base(source) { }
+		public readonly string StringValue;
+
+        public StringConstant(String source) : base(source)
+		{
+			StringValue = source.Value;
+		}
+
         public override string ToString()
         {
             return "\"" + Source.ToString() + "\"";

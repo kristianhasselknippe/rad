@@ -43,6 +43,7 @@
     <Compile Include="Operator.cs" />
     <Compile Include="Statement.cs" />
     <Compile Include="Compiler.cs" />
+    <Compile Include="CodeGenerator.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

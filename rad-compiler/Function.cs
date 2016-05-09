@@ -28,7 +28,8 @@ namespace radcompiler
     {
         static int anonymousCounter = 0;
 
-        public readonly string Name;
+        public readonly string
+			Name;
         public readonly IList<IdentifierToken> ParameterList;
         public readonly FunctionBody FunctionBody;
 
